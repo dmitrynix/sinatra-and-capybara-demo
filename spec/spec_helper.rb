@@ -1,6 +1,9 @@
 require 'rubygems'
 require 'bundler/setup'
 
+require 'capybara/rspec'
+Capybara.app = DemoApp::Application
+
 Bundler.require :default, :test
 
 ENV['RACK_ENV'] = 'test'
