@@ -1,15 +1,13 @@
 require 'spec_helper'
 
-describe DemoApp::Application do
-  context 'Get /' do
-    it 'should be ok' do
-      get '/'
-      last_response.status.should be(200)
-    end
+feature 'the message process' do
+  it 'expose message' do
+    visit '/'
 
-    it 'should have the correct text' do
-      get '/'
-      last_response.body.should == 'DemoApp::Application request'
-    end
+    fill_in 'Message', :with => 'Hi!'
+
+    click_button 'Message!'
+
+    page.should have_content 'Sua mensagem foi "Hi!"'
   end
 end
