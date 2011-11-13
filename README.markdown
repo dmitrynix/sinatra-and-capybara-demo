@@ -1,168 +1,119 @@
-Depois de recomendações do @hakagura sobre o framework sinatra (o mesmo que me recomendou o Rails ;) resolvi voltar a testá-lo. Neste post vou mostrar como criar uma aplicação usando sinatra+rspec.
+Seguindo nosso projeto anterior sobre Sinatra
+[Hello Sinatra](/hello-sinatra/) vamos agora usar o
+[Capybara](https://github.com/jnicklas/capybara) para fazer os "testes de
+aceitação".
 
-# Preparando ambiente com Bundler
+# Adicionar a gem
 
-Crie um arquivo de ``Gemfile`` seguindo este exemplo:
+O nosso projeto é baseado no projeto
+[sinatra-demo-app](https://github.com/dmitrynix/sinatra-demo-app), agora vamos pegar o projeto e adicionar a gem do capybara:
+
+    % git clone git://github.com/dmitrynix/sinatra-demo-app.git
+
+Adicionar a gem no `Gemfile`:
 
     source 'http://rubygems.org'
 
     gem 'sinatra'
 
-Agora um ``bundle install`` para instalar as dependêcias e criar o ``Gemfile.lock``.
-
-Agora vamos criar o ``config.ru`` e o ``demo_app.rb`` para carregar as dependencias usando o bundler:
-
-config.ru:
-
-    require 'rubygems'
-    require 'bundler/setup'
-
-    Bundler.require :default
-
-    require File.dirname(__FILE__)+'/demo_app'
-
-    run DemoApp::Application
-
-demo_app.rb:
-
-    module DemoApp
-      class Application < Sinatra::Base
-      end
-    end
-
-Nossa aplicação básica do tipo modular já está pronta.
-
-# Iniciando o ambiente de testes com RSpec
-
-Primeiro adicionar o rspec e o rack-test para o Gemfile:
-
     group :development, :test do
       gem 'rspec'
       gem 'rack-test', :require => 'rack/test'
+      gem 'capybara'
     end
 
-Agora vamos criar um arquivo ``spec_helper.rb`` dentro do diretório ``spec``:
+E executar o `bundle install`.
 
-    require 'rubygems'
-    require 'bundler/setup'
+## Primeiro teste
 
-    Bundler.require :default, :test
+Nosso exemplo será de um formulário simples que a pessoa vai escrever uma
+mensagem e ela aparecerá após ela enviar para o servidor.
 
-    ENV['RACK_ENV'] = 'test'
+Como já temos um projeto basta adicionar ao `spec_helper.rb` o conteúdo:
 
-    require File.dirname(__FILE__)+'/../demo_app'
+    require 'capybara/rspec'
 
-    RSpec.configure do |config|
-      include Rack::Test::Methods
+Esse require, claro, deve ser depois do require das rubygems ou depois do
+require do bundler.
 
-      def app
-        DemoApp::Application
-      end
-    end
+E dizer ao capybara qual a nossa app rack:
 
-Nosso ambiente de teste também já está pronto.
+    Capybara.app = DemoApp::Application
 
-# Primeira spec
-
-Ainda dentro do diretório ``spec`` vamos criar o arquivo ``demo_app_spec.rb``:
+Agora vamos ao nosso primeiro spec:
 
     require 'spec_helper'
 
-    describe DemoApp::Application do
-      context 'Get /' do
-        it 'should be ok' do
-          get '/'
-          last_response.status.should be(200)
-        end
+    feature 'the message process' do
+      it 'expose message' do
+        visit '/'
+
+        fill_in 'Message', :with => 'Hi!'
+
+        click_button 'Message!'
+
+        page.should have_content 'Sua mensagem foi "Hi!"'
       end
     end
 
-Nosso primeiro spec irá, obviamente, falhar:
+Na sequencia
 
-    sinatra-demo-app % rspec spec/demo_app_spec.rb
+* Visite a url '/' da aplicação;
+* Preencha o input do label correspondente com o nome "Message";
+* Click no butão `"Message!"`;
+* No final deste processo deve ter a nossa mensagem.
+
+Certamente ele irá falhar:
+
+    % rspec spec/demo_app_spec.rb
     F
 
     Failures:
 
-      1) DemoApp::Application Get / should be ok
-         Failure/Error: last_response.status.should be(200)
-       
-           expected #<Fixnum:401> => 200
-                got #<Fixnum:809> => 404
-       
-           Compared using equal?, which compares object identity,
-           but expected and actual are not the same object. Use
-           'actual.should == expected' if you don't care about
-           object identity in this example.
-         # ./spec/demo_app_spec.rb:7:in `block (3 levels) in <top (required)>'
+      1) the message process expose message
+         Failure/Error: within("#message") do
+         ArgumentError:
+           rack-test requires a rack application, but none was given
+         # (eval):2:in `find'
+         # ./spec/demo_app_spec.rb:5:in `block (2 levels) in <top (required)>'
 
-    Finished in 0.02014 seconds
+    Finished in 0.22032 seconds
     1 example, 1 failure
 
     Failed examples:
 
-    rspec ./spec/demo_app_spec.rb:5 # DemoApp::Application Get / should be ok
+    rspec ./spec/demo_app_spec.rb:4 # the message process expose message
 
-
-Se você tentar inicializar o servidor para testar no navegador também verá uma mensagem de erro:
-
-    sinatra-demo-app % rackup config.ru -p 4000
-    [2011-08-09 08:43:37] INFO  WEBrick 1.3.1
-    [2011-08-09 08:43:37] INFO  ruby 1.9.3 (2011-07-31) [x86_64-darwin11.0.0]
-    [2011-08-09 08:43:37] INFO  WEBrick::HTTPServer#start: pid=61772 port=4000
-    127.0.0.1 - - [09/Aug/2011 08:43:40] "GET / HTTP/1.1" 404 429 0.0085
-
-Escrevendo nosso código:
+Agora vamos modificar nossa aplicação para o spec:
 
     module DemoApp
       class Application < Sinatra::Base
         get '/' do
-          ""
+    <<END
+    <form action="/" method="post">
+      <label for="message">Message</label>
+      <input type="text" name="message" id="message">
+      <button>Message!</button>
+    </form>
+    END
+        end
+
+        post '/' do
+          "Sua mensagem foi \"#{params[:message]}\""
         end
       end
     end
 
-Executando o rspec novamente:
+E ele irá passar:
 
-    sinatra-demo-app % rspec spec/demo_app_spec.rb
+    % rspec spec/demo_app_spec.rb
     .
 
-    Finished in 0.02425 seconds
+    Finished in 0.36823 seconds
     1 example, 0 failures
 
-# Mais um exemplo de spec
+Alguns preferem escrever os specs dentro de `spec/integration`, mas eu já
+vi também em `spec/acceptance`.
 
-Agora vamos testar o texto que retorna da requisição:
-
-    require 'spec_helper'
-
-    describe DemoApp::Application do
-      context 'Get /' do
-        it 'should be ok' do
-          get '/'
-          last_response.status.should be(200)
-        end
-
-        it 'should have the correct text' do
-          get '/'
-          last_response.body.should == 'DemoApp::Application request'
-        end
-      end
-    end
-
-Quando executado este teste irá obviamente falhar, mas ao escrever corretamente a aplicação:
-
-    module DemoApp
-      class Application < Sinatra::Base
-        get '/' do
-          "DemoApp::Application request"
-        end
-      end
-    end
-
-Ele irá passar.
-
-# Links recomendados
-
-* [http://sinatrarb.com](http://sinatrarb.com);
-* [http://sinatra-book-contrib.com/](http://sinatra-book-contrib.com/);
+Como de costume o projeto está no github:
+[sinatra-and-capybara-demo](https://github.com/dmitrynix/sinatra-and-capybara-demo)
