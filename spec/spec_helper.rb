@@ -1,14 +1,15 @@
 require 'rubygems'
 require 'bundler/setup'
 
-require 'capybara/rspec'
-Capybara.app = DemoApp::Application
-
 Bundler.require :default, :test
+
+require 'capybara/rspec'
 
 ENV['RACK_ENV'] = 'test'
 
 require File.dirname(__FILE__)+'/../demo_app'
+
+Capybara.app = DemoApp::Application
 
 RSpec.configure do |config|
   include Rack::Test::Methods
