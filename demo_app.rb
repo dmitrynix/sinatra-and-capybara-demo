@@ -1,13 +1,15 @@
 module DemoApp
   class Application < Sinatra::Base
-    get '/' do
-<<END
-<form action="/" method="post">
-  <label for="message">Message</label>
-  <input type="text" name="message" id="message">
+    template :index do
+"<form=\"\" action=\"/\" method=\"post\">
+  <label for=\"message\">Message</label>
+  <input type=\"text\" name=\"message\" id=\"message\">
   <button>Message!</button>
-</form>
-END
+</form>"
+    end
+
+    get '/' do
+      erb :index
     end
 
     post '/' do
