@@ -1,7 +1,7 @@
 module DemoApp
   class Application < Sinatra::Base
     template :index do
-"<form=\"\" action=\"/\" method=\"post\">
+"<form action=\"/\" method=\"post\">
   <label for=\"message\">Message</label>
   <input type=\"text\" name=\"message\" id=\"message\">
   <button>Message!</button>
@@ -13,7 +13,7 @@ module DemoApp
     end
 
     post '/' do
-      "Sua mensagem foi \"#{params[:message]}\""
+      %Q[Sua mensagem foi "#{params[:message]}"]
     end
   end
 end
